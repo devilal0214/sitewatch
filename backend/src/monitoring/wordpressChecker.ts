@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { logger } from '../utils/logger';
 import { incidentManager } from './incidentManager';
@@ -51,8 +52,8 @@ export async function checkWordPress(websiteId: string): Promise<void> {
         latestCoreVersion: core?.latest_version,
         needsCoreUpdate,
         phpVersion: core?.php_version,
-        plugins,
-        themes,
+        plugins: plugins as unknown as Prisma.InputJsonValue,
+        themes: themes as unknown as Prisma.InputJsonValue,
         vulnerabilities,
         apiHealthy: true,
         lastCheckedAt: new Date(),
@@ -62,8 +63,8 @@ export async function checkWordPress(websiteId: string): Promise<void> {
         latestCoreVersion: core?.latest_version,
         needsCoreUpdate,
         phpVersion: core?.php_version,
-        plugins,
-        themes,
+        plugins: plugins as unknown as Prisma.InputJsonValue,
+        themes: themes as unknown as Prisma.InputJsonValue,
         vulnerabilities,
         apiHealthy: true,
         lastCheckedAt: new Date(),

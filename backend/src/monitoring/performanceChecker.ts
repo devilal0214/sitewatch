@@ -40,17 +40,17 @@ export async function checkPerformance(websiteId: string): Promise<void> {
 
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            if (entry.entryType === 'paint' && entry.name === 'first-contentful-paint') {
+            if ((entry.entryType as string) === 'paint' && entry.name === 'first-contentful-paint') {
               result.fcp = Math.round(entry.startTime);
             }
-            if (entry.entryType === 'largest-contentful-paint') {
+            if ((entry.entryType as string) === 'largest-contentful-paint') {
               result.lcp = Math.round(entry.startTime);
             }
           }
         });
 
         try {
-          observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
+          observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] as any });
         } catch { /* ignore */ }
 
         setTimeout(() => {

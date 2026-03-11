@@ -86,7 +86,8 @@ function fetchSSLInfo(hostname: string): Promise<SSLInfo> {
             .join(', ')
         : 'Unknown';
 
-      const subject = cert.subject?.CN || hostname;
+      const subjectCN = cert.subject?.CN;
+      const subject = (Array.isArray(subjectCN) ? subjectCN[0] : subjectCN) || hostname;
 
       resolve({
         issuer,

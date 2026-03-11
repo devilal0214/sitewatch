@@ -26,7 +26,7 @@ export async function checkDomain(websiteId: string): Promise<void> {
       update: { ...info, lastCheckedAt: new Date() },
     });
 
-    if (info.expiryDate && info.daysRemaining !== null) {
+    if (info.expiryDate && info.daysRemaining != null) {
       if (info.daysRemaining <= 0) {
         await incidentManager.createDomainExpiredIncident(website, domain);
       } else if (info.daysRemaining <= config.thresholds.domainExpiryWarningDays) {
@@ -50,7 +50,7 @@ function lookupDomain(domain: string): Promise<{
   errorMessage?: string;
 }> {
   return new Promise((resolve, reject) => {
-    whois.lookup(domain, (err: Error | null, data: string) => {
+    whois.lookup(domain, (err: Error | null, data: any) => {
       if (err) {
         reject(err);
         return;
