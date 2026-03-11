@@ -1,0 +1,516 @@
+// This is your Prisma schema file
+// JV SiteWatch DevOps - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  AGENCY
+  CLIENT
+}
+
+enum WebsiteStatus {
+  UP
+  DOWN
+  DEGRADED
+  PAUSED
+}
+
+enum IncidentType {
+  website_down
+  slow_response
+  ssl_expiring
+  ssl_expired
+  domain_expiring
+  domain_expired
+  server_overload
+  container_stopped
+  container_restarting
+  backup_overdue
+  wordpress_vulnerability
+  wordpress_outdated
+}
+
+enum IncidentStatus {
+  open
+  acknowledged
+  resolved
+}
+
+enum AlertChannel {
+  email
+  slack
+  telegram
+  whatsapp
+  webhook
+}
+
+enum AlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum CheckStatus {
+  success
+  failure
+  timeout
+  dns_error
+  ssl_error
+}
+
+enum ContainerState {
+  running
+  stopped
+  restarting
+  paused
+  dead
+  exited
+}
+
+enum ReportType {
+  monthly_health
+  wordpress_maintenance
+  incident_summary
+  performance
+}
+
+enum ReportStatus {
+  pending
+  generating
+  completed
+  failed
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          UserRole  @default(CLIENT)
+  avatar        String?
+  timezone      String    @default("UTC")
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+
+  // Agency branding for white-label reports
+  agencyName    String?
+  agencyLogo    String?
+  agencyWebsite String?
+  agencyPhone   String?
+  agencyAddress String?
+  agencyEmail   String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  websites      Website[]
+  servers       Server[]
+  alertRules    AlertRule[]
+  incidents     Incident[]
+  reports       Report[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Website {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  url             String
+  status          WebsiteStatus @default(UP)
+  isActive        Boolean       @default(true)
+  checkInterval   Int           @default(60)   // seconds
+  timeout         Int           @default(30)   // seconds
+
+  // Monitoring features toggles
+  monitorSSL      Boolean       @default(true)
+  monitorDomain   Boolean       @default(true)
+  monitorBackup   Boolean       @default(false)
+  monitorWordPress Boolean      @default(false)
+  monitorPerformance Boolean    @default(false)
+  backupStatusUrl String?
+
+  // Status page
+  statusPageEnabled Boolean     @default(false)
+  statusPageSlug    String?     @unique
+
+  // Current state cache
+  lastCheckedAt   DateTime?
+  lastStatusCode  Int?
+  lastResponseTime Int?         // milliseconds
+  uptimePercentage Float        @default(100)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  uptimeLogs      UptimeLog[]
+  sslRecord       SslRecord?
+  domainRecord    DomainRecord?
+  incidents       Incident[]
+  backupLogs      BackupLog[]
+  wordpressData   WordPressData?
+  performanceLogs PerformanceLog[]
+  statusPageItems StatusPageItem[]
+  reports         Report[]
+
+  @@index([userId])
+  @@index([url])
+  @@index([statusPageSlug])
+  @@map("websites")
+}
+
+model UptimeLog {
+  id           String      @id @default(cuid())
+  websiteId    String
+  website      Website     @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  status       CheckStatus
+  statusCode   Int?
+  responseTime Int?        // milliseconds
+  errorMessage String?
+  dnsResolved  Boolean     @default(true)
+  checkedAt    DateTime    @default(now())
+
+  @@index([websiteId, checkedAt])
+  @@index([checkedAt])
+  @@map("uptime_logs")
+}
+
+model SslRecord {
+  id              String    @id @default(cuid())
+  websiteId       String    @unique
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  issuer          String?
+  subject         String?
+  validFrom       DateTime?
+  validTo         DateTime?
+  daysRemaining   Int?
+  isValid         Boolean   @default(true)
+  lastCheckedAt   DateTime  @default(now())
+  errorMessage    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([websiteId])
+  @@map("ssl_records")
+}
+
+model DomainRecord {
+  id              String    @id @default(cuid())
+  websiteId       String    @unique
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  domain          String
+  registrar       String?
+  expiryDate      DateTime?
+  daysRemaining   Int?
+  lastCheckedAt   DateTime  @default(now())
+  errorMessage    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([websiteId])
+  @@map("domain_records")
+}
+
+model Server {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  host         String
+  port         Int      @default(22)
+  username     String
+  sshKeyPath   String?
+  sshPassword  String?  // encrypted
+  isActive     Boolean  @default(true)
+
+  // Current state cache
+  lastCheckedAt DateTime?
+  cpuUsage      Float?
+  ramUsage      Float?
+  diskUsage     Float?
+  loadAverage   Float?
+  uptimeSeconds BigInt?
+  isOnline      Boolean @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  serverMetrics   ServerMetric[]
+  containers      Container[]
+  incidents       Incident[]
+
+  @@index([userId])
+  @@map("servers")
+}
+
+model ServerMetric {
+  id          String   @id @default(cuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  cpuUsage    Float
+  ramUsage    Float
+  ramTotal    BigInt?
+  ramUsed     BigInt?
+  diskUsage   Float
+  diskTotal   BigInt?
+  diskUsed    BigInt?
+  loadAvg1    Float?
+  loadAvg5    Float?
+  loadAvg15   Float?
+  uptimeSeconds BigInt?
+  recordedAt  DateTime @default(now())
+
+  @@index([serverId, recordedAt])
+  @@map("server_metrics")
+}
+
+model Container {
+  id          String         @id @default(cuid())
+  serverId    String
+  server      Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  containerId String
+  name        String
+  image       String
+  state       ContainerState @default(running)
+  status      String?
+  cpuPercent  Float?
+  memPercent  Float?
+  isActive    Boolean        @default(true)
+  lastCheckedAt DateTime?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  incidents   Incident[]
+
+  @@index([serverId])
+  @@map("containers")
+}
+
+model WordPressData {
+  id              String    @id @default(cuid())
+  websiteId       String    @unique
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  coreVersion     String?
+  latestCoreVersion String?
+  needsCoreUpdate Boolean   @default(false)
+  phpVersion      String?
+  plugins         Json?     // Array of plugin objects
+  themes          Json?     // Array of theme objects
+  vulnerabilities Json?     // Array of vulnerability objects
+  apiHealthy      Boolean   @default(true)
+  lastCheckedAt   DateTime  @default(now())
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([websiteId])
+  @@map("wordpress_data")
+}
+
+model BackupLog {
+  id              String    @id @default(cuid())
+  websiteId       String
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  lastBackupAt    DateTime?
+  backupSizeBytes BigInt?
+  status          String    @default("unknown")
+  errorMessage    String?
+  checkedAt       DateTime  @default(now())
+
+  @@index([websiteId, checkedAt])
+  @@map("backup_logs")
+}
+
+model PerformanceLog {
+  id              String    @id @default(cuid())
+  websiteId       String
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  responseTime    Int?      // ms
+  ttfb            Int?      // time to first byte ms
+  pageLoadTime    Int?      // ms
+  lighthouseScore Int?      // 0-100
+  fcp             Int?      // First Contentful Paint ms
+  lcp             Int?      // Largest Contentful Paint ms
+  cls             Float?    // Cumulative Layout Shift
+  tbt             Int?      // Total Blocking Time ms
+  errorMessage    String?
+  recordedAt      DateTime  @default(now())
+
+  @@index([websiteId, recordedAt])
+  @@map("performance_logs")
+}
+
+model Incident {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  websiteId       String?
+  website         Website?        @relation(fields: [websiteId], references: [id])
+  serverId        String?
+  server          Server?         @relation(fields: [serverId], references: [id])
+  containerId     String?
+  container       Container?      @relation(fields: [containerId], references: [id])
+
+  type            IncidentType
+  status          IncidentStatus  @default(open)
+  title           String
+  description     String?
+  severity        AlertSeverity   @default(warning)
+
+  // AI analysis
+  aiAnalysis      String?
+  aiSuggestion    String?
+
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  alertLogs       AlertLog[]
+
+  @@index([userId, createdAt])
+  @@index([websiteId])
+  @@index([status])
+  @@map("incidents")
+}
+
+model AlertRule {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  channel         AlertChannel
+  isActive        Boolean       @default(true)
+
+  // Channel-specific config (encrypted where needed)
+  config          Json          // {email, slackWebhook, telegramChatId, whatsappNumber, webhookUrl}
+
+  // Conditions to trigger
+  notifyOnDown    Boolean       @default(true)
+  notifyOnRecover Boolean       @default(true)
+  notifyOnSSL     Boolean       @default(true)
+  notifyOnDomain  Boolean       @default(true)
+  notifyOnBackup  Boolean       @default(true)
+  notifyOnServer  Boolean       @default(true)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  alertLogs       AlertLog[]
+
+  @@index([userId])
+  @@map("alert_rules")
+}
+
+model AlertLog {
+  id           String        @id @default(cuid())
+  incidentId   String
+  incident     Incident      @relation(fields: [incidentId], references: [id])
+  alertRuleId  String?
+  alertRule    AlertRule?    @relation(fields: [alertRuleId], references: [id])
+
+  channel      AlertChannel
+  recipient    String
+  message      String
+  success      Boolean
+  errorMessage String?
+  sentAt       DateTime      @default(now())
+
+  @@index([incidentId])
+  @@map("alert_logs")
+}
+
+model StatusPage {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  title       String
+  description String?
+  logoUrl     String?
+  isPublic    Boolean          @default(true)
+  customDomain String?
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  items       StatusPageItem[]
+
+  @@map("status_pages")
+}
+
+model StatusPageItem {
+  id           String      @id @default(cuid())
+  statusPageId String?
+  statusPage   StatusPage? @relation(fields: [statusPageId], references: [id])
+  websiteId    String?
+  website      Website?    @relation(fields: [websiteId], references: [id])
+  displayName  String
+  sortOrder    Int         @default(0)
+
+  @@index([statusPageId])
+  @@map("status_page_items")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  websiteId   String?
+  website     Website?     @relation(fields: [websiteId], references: [id])
+
+  type        ReportType
+  status      ReportStatus @default(pending)
+  title       String
+  periodStart DateTime
+  periodEnd   DateTime
+  data        Json?        // Report data snapshot
+  pdfUrl      String?
+  errorMessage String?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([websiteId])
+  @@map("reports")
+}
