@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Proxy all requests to Next.js on port 3000
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule ^/?(.*) ws://127.0.0.1:3000/$1 [P,L]
+
+RewriteRule ^/?(.*) http://127.0.0.1:3000/$1 [P,L]
