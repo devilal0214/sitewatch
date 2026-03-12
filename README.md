@@ -310,9 +310,3 @@ GET /health
 ```
 
 Returns `200 OK` with JSON status of database and Redis connections. Use this with UptimeRobot, Pingdom, or another external service to monitor the monitor itself.
-
----
-
-## License
-
-MIT © JV Digital Agency
