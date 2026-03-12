@@ -31,7 +31,7 @@ describe('sslChecker – fetchSSLInfo', () => {
       expect(result.subject).toBe('CN=example.com');
       expect(result.issuer).toContain('Let');
       expect(result.isValid).toBe(true);
-      expect(result.daysUntilExpiry).toBeGreaterThan(0);
+      expect(result.daysRemaining).toBeGreaterThan(0);
       done();
     });
   });

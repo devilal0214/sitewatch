@@ -54,6 +54,7 @@
     "@types/node": "^20.11.24",
     "@types/node-cron": "^3.0.11",
     "@types/pdfkit": "^0.13.3",
+    "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",
     "eslint": "^8.57.0",
@@ -67,6 +68,11 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "tsconfig.test.json"
+      }
+    },
     "roots": [
       "<rootDir>/src"
     ],

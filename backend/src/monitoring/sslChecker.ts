@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 import { incidentManager } from './incidentManager';
 import { config } from '../config';
 
-interface SSLInfo {
+export interface SSLInfo {
   issuer: string;
   subject: string;
   validFrom: Date;
@@ -56,7 +56,7 @@ export async function checkSSL(websiteId: string): Promise<void> {
   }
 }
 
-function fetchSSLInfo(hostname: string): Promise<SSLInfo> {
+export function fetchSSLInfo(hostname: string): Promise<SSLInfo> {
   return new Promise((resolve) => {
     const socket = tls.connect(443, hostname, { servername: hostname, rejectUnauthorized: false }, () => {
       const cert = socket.getPeerCertificate();
