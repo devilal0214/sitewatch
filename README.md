@@ -69,7 +69,7 @@ Alerts are dispatched through **Email, Slack, Telegram, WhatsApp, and custom web
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/jv-sitewatch.git
+git clone https://github.com/devilal0214/sitewatch
 cd jv-sitewatch
 ```
 
@@ -310,3 +310,6 @@ GET /health
 ```
 
 Returns `200 OK` with JSON status of database and Redis connections. Use this with UptimeRobot, Pingdom, or another external service to monitor the monitor itself.
+
+---
+

@@ -1,0 +1,15 @@
+# OLS Reverse Proxy — api.sitewatch.jaiveeru.site (Express Backend, port 4000)
+# Place this file at: /home/api.sitewatch.jaiveeru.site/public_html/.htaccess
+#
+# CyberPanel Admin ▸ Websites ▸ api.sitewatch.jaiveeru.site ▸ File Manager
+# Upload to public_html/ and name it .htaccess
+
+RewriteEngine On
+
+# ── WebSocket pass-through (real-time dashboard updates) ─────────────────────
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule /?(.*) ws://127.0.0.1:4000/$1 [P,L]
+
+# ── Proxy all API requests to Express ────────────────────────────────────────
+RewriteRule /?(.*) http://127.0.0.1:4000/$1 [P,L]

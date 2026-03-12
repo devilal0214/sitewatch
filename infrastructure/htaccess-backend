@@ -1,8 +1,0 @@
-RewriteEngine On
-
-# Proxy all /api requests to Express on port 3001
-RewriteCond %{HTTP:Upgrade} websocket [NC]
-RewriteCond %{HTTP:Connection} upgrade [NC]
-RewriteRule ^/?(.*) ws://127.0.0.1:3001/$1 [P,L]
-
-RewriteRule ^/?(.*) http://127.0.0.1:3001/$1 [P,L]

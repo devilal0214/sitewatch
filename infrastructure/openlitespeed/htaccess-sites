@@ -1,0 +1,19 @@
+# OLS Reverse Proxy — sites.jaiveeru.site (Public Status Pages)
+# Place this file at: /home/sites.jaiveeru.site/public_html/.htaccess
+#
+# This domain proxies to the same Next.js process on port 3000.
+# No separate Node.js process is needed — the frontend already serves
+# /status/[slug] as a public route without authentication.
+#
+# CyberPanel Admin ▸ Websites ▸ sites.jaiveeru.site ▸ File Manager
+# Upload to public_html/ and name it .htaccess
+
+RewriteEngine On
+
+# ── WebSocket pass-through ────────────────────────────────────────────────────
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule /?(.*) ws://127.0.0.1:3000/$1 [P,L]
+
+# ── Proxy to Next.js frontend (handles /status/* routes) ─────────────────────
+RewriteRule /?(.*) http://127.0.0.1:3000/$1 [P,L]

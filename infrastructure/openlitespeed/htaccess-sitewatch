@@ -1,0 +1,15 @@
+# OLS Reverse Proxy — sitewatch.jaiveeru.site (Next.js Frontend, port 3000)
+# Place this file at: /home/sitewatch.jaiveeru.site/public_html/.htaccess
+#
+# CyberPanel Admin ▸ Websites ▸ sitewatch.jaiveeru.site ▸ File Manager
+# Upload to public_html/ and name it .htaccess
+
+RewriteEngine On
+
+# ── WebSocket pass-through (Next.js hot-reload / socket.io) ──────────────────
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule /?(.*) ws://127.0.0.1:3000/$1 [P,L]
+
+# ── Proxy every request to Next.js ───────────────────────────────────────────
+RewriteRule /?(.*) http://127.0.0.1:3000/$1 [P,L]
